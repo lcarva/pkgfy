@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"path"
 
@@ -16,7 +17,7 @@ var installCmd = &cobra.Command{
 	Long:  "The file is downloaded into ~/bin, ready to be executed.",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		pkg := args[0]
+		url := args[0]
 		fmt.Println("installing ...")
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
@@ -27,7 +28,9 @@ var installCmd = &cobra.Command{
 			// TODO: Make this configurable
 			InstallDir: path.Join(homeDir, "bin"),
 		}
-		if err := core.Install(pkg, &config); err != nil {
+		client := core.HTTPClient(&http.Client{})
+		p := core.Pkgfy{Config: config, Client: &client}
+		if err := p.Install(url); err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
