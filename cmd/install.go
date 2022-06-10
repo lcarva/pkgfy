@@ -12,7 +12,7 @@ import (
 
 // installCmd represents the install command
 var installCmd = &cobra.Command{
-	Use:   "install <url>",
+	Use:   "install [url to fetch]",
 	Short: "Install a file from a URL",
 	Long:  "The file is downloaded into ~/bin, ready to be executed.",
 	Args:  cobra.ExactArgs(1),
@@ -28,12 +28,20 @@ var installCmd = &cobra.Command{
 			InstallDir: path.Join(homeDir, "bin"),
 		}
 		client := core.HTTPClient(&http.Client{})
+
+		alias, err := cmd.Flags().GetString("alias")
+		if err != nil {
+			return
+		}
+		opts := &core.InstallOptions{Alias: alias}
 		p := core.Pkgfy{Config: config, Client: &client}
-		err = p.Install(url)
+		err = p.Install(url, opts)
 		return
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(installCmd)
+
+	installCmd.Flags().StringP("alias", "a", "", "Alias name for the local file")
 }

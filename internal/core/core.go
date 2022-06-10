@@ -25,9 +25,13 @@ type Pkgfy struct {
 	Client *HTTPClient
 }
 
+type InstallOptions struct {
+	Alias string
+}
+
 // Install downloads the given url and saves it in the config.InstallDir. It creates the
 // config.InstallDir if needed. The file mode for the created dir and file is 0755.
-func (p *Pkgfy) Install(url string) (err error) {
+func (p *Pkgfy) Install(url string, opts *InstallOptions) (err error) {
 	// TODO: Make mode configurable
 	err = os.MkdirAll(p.Config.InstallDir, 0755)
 	if err != nil {
@@ -39,6 +43,13 @@ func (p *Pkgfy) Install(url string) (err error) {
 	err = os.Chmod(filePath, 0755)
 	if err != nil {
 		return
+	}
+
+	if opts.Alias != "" {
+		err = symlinkAlias(opts.Alias, filePath)
+		if err != nil {
+			return
+		}
 	}
 	return
 }
@@ -73,6 +84,12 @@ func (p *Pkgfy) download(url, dir string) (filePath string, err error) {
 
 	err = os.Rename(tempFilePath, filePath)
 	return
+}
+
+// symlinkAlias create a new symlink with the given alias for the target path.
+func symlinkAlias(alias, target string) (err error) {
+	aliasPath := path.Join(filepath.Dir(target), alias)
+	return os.Symlink(target, aliasPath)
 }
 
 // extractFilename retrieves a filename from the response by inspecting the Content-Disposition
