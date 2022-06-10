@@ -30,10 +30,9 @@ type Pkgfy struct {
 func (p *Pkgfy) Install(url string) (err error) {
 	// TODO: Make mode configurable
 	err = os.MkdirAll(p.Config.InstallDir, 0755)
-	if err != nil && !os.IsExist(err) {
+	if err != nil {
 		return
 	}
-	err = nil
 
 	filePath, err := p.download(url, p.Config.InstallDir)
 	// TODO: Make mode configurable

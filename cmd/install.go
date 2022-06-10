@@ -16,13 +16,12 @@ var installCmd = &cobra.Command{
 	Short: "Install a file from a URL",
 	Long:  "The file is downloaded into ~/bin, ready to be executed.",
 	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		url := args[0]
 		fmt.Println("installing ...")
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			return
 		}
 		config := core.PkgfyConfig{
 			// TODO: Make this configurable
@@ -30,10 +29,8 @@ var installCmd = &cobra.Command{
 		}
 		client := core.HTTPClient(&http.Client{})
 		p := core.Pkgfy{Config: config, Client: &client}
-		if err := p.Install(url); err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
+		err = p.Install(url)
+		return
 	},
 }
 
