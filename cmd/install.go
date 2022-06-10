@@ -7,6 +7,7 @@ import (
 	"path"
 
 	"github.com/lcarva/pkgfy/internal/core"
+	"github.com/lcarva/pkgfy/internal/persistance"
 	"github.com/spf13/cobra"
 )
 
@@ -38,6 +39,13 @@ var installCmd = &cobra.Command{
 
 		fmt.Printf("Installing %s from %s...\n", name, url)
 		err = p.Install(pkg)
+		if err != nil {
+			return
+		}
+
+		// TODO: Make DB path configurable
+		dbPath := path.Join(homeDir, ".pkgfy.db")
+		err = persistance.Save(dbPath, pkg)
 		return
 	},
 }
