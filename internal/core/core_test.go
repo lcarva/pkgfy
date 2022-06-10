@@ -23,81 +23,67 @@ func (c *FakeHTTPClient) Get(u string) (*http.Response, error) {
 }
 
 func TestInstall(t *testing.T) {
-	var tests = []struct {
-		name     string
-		filename string
-		fileurl  string
-		headers  *http.Header
-		alias    string
+	var testCases = []struct {
+		name string
+		pkg  Package
 	}{
-		{"filename from URL", "gonzo", "https://example.com/gonzo", &http.Header{}, ""},
-		{"filename from URL, impartial Content-Disposition",
-			"gonzo", "https://example.com/gonzo", cdHeader([]string{"attachement"}), ""},
-		{"filename from Content-Disposition",
-			"gonzo", "https://example.com/x", cdHeader([]string{`attachment; filename="gonzo"`}), ""},
-		{"filename from Content-Disposition without quotes",
-			"gonzo", "https://example.com/x", cdHeader([]string{`attachment; filename=gonzo`}), ""},
-		{"filename from first Content-Disposition", "gonzo", "https://example.com/x",
-			cdHeader([]string{`attachment; filename="gonzo"`, `attachment; filename="y"`}), ""},
-		{"filename from URL hash", "182ccedb33a9e03fbf1079b209da1a31", "https://example.com/", &http.Header{}, ""},
-		{"include alias", "gonzo", "https://example.com/gonzo", &http.Header{}, "gonzoo"},
+		{"simple installation",
+			Package{Name: "gonzo", URL: "https://example.com/x"}},
+		{"installation with an alias",
+			Package{Name: "gonzo", URL: "https://example.com/gonzo", Alias: "gonzoo"}},
 	}
 
-	for _, test := range tests {
-		t.Logf("Testing %s", test.name)
-		content := "hello, gonzo!"
-		body := ioutil.NopCloser(bytes.NewReader([]byte(content)))
-		var actualUrl string
-		parsedUrl, err := url.Parse(test.fileurl)
-		assert.Nil(t, err)
-		client := HTTPClient(&FakeHTTPClient{
-			mockGet: func(u string) (*http.Response, error) {
-				actualUrl = u
-				return &http.Response{
-					StatusCode: 200,
-					Header:     *test.headers,
-					Body:       body,
-					Request:    &http.Request{URL: parsedUrl},
-				}, nil
-			},
-		})
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Logf("Testing %s", tc.name)
+			content := "hello, gonzo!"
+			body := ioutil.NopCloser(bytes.NewReader([]byte(content)))
+			var actualUrl string
+			parsedUrl, err := url.Parse(tc.pkg.URL)
+			assert.Nil(t, err)
+			client := HTTPClient(&FakeHTTPClient{
+				mockGet: func(u string) (*http.Response, error) {
+					actualUrl = u
+					return &http.Response{
+						StatusCode: 200,
+						Body:       body,
+						Request:    &http.Request{URL: parsedUrl},
+					}, nil
+				},
+			})
 
-		installDir := path.Join(t.TempDir(), "bin")
-		p := Pkgfy{Config: PkgfyConfig{InstallDir: installDir}, Client: &client}
+			installDir := path.Join(t.TempDir(), "bin")
+			p := Pkgfy{Config: PkgfyConfig{InstallDir: installDir}, Client: &client}
 
-		err = p.Install(test.fileurl, &InstallOptions{Alias: test.alias})
-		assert.Nil(t, err)
-		assert.Equal(t, test.fileurl, actualUrl)
+			err = p.Install(tc.pkg)
+			assert.Nil(t, err)
+			assert.Equal(t, tc.pkg.URL, actualUrl)
 
-		files, err := ioutil.ReadDir(installDir)
-		assert.Nil(t, err)
-		actualFiles := map[string]bool{}
-		for _, f := range files {
-			actualFiles[f.Name()] = true
-			switch f.Name() {
-			case test.filename:
-				expectedMode := fs.FileMode(0755)
-				assert.Equal(t, expectedMode, f.Mode())
-			case test.alias:
-				// Symlinks do their own thing when it comes to file permissions.
-			default:
-				t.Fatalf("Found unexpected file in install dir: %q", f.Name())
+			files, err := ioutil.ReadDir(installDir)
+			assert.Nil(t, err)
+			actualFiles := []string{}
+			for _, f := range files {
+				actualFiles = append(actualFiles, f.Name())
+				switch f.Name() {
+				case tc.pkg.Name:
+					expectedMode := fs.FileMode(0755)
+					assert.Equal(t, expectedMode, f.Mode())
+				case tc.pkg.Alias:
+					// Symlinks do their own thing when it comes to file permissions.
+				default:
+					t.Fatalf("Found unexpected file in install dir: %q", f.Name())
+				}
 			}
-		}
-		expectedFiles := map[string]bool{test.filename: true}
-		if test.alias != "" {
-			expectedFiles[test.alias] = true
-		}
-		assert.Equal(t, expectedFiles, actualFiles)
+			expectedFiles := []string{tc.pkg.Name}
+			if tc.pkg.Alias != "" {
+				expectedFiles = append(expectedFiles, tc.pkg.Alias)
+			}
+			assert.Equal(t, expectedFiles, actualFiles)
 
-		expectedFilename := path.Join(installDir, test.filename)
-		actualContent, err := os.ReadFile(expectedFilename)
-		assert.Nil(t, err)
-		assert.Equal(t, content, string(actualContent))
+			expectedFilename := path.Join(installDir, tc.pkg.Name)
+			actualContent, err := os.ReadFile(expectedFilename)
+			assert.Nil(t, err)
+			assert.Equal(t, content, string(actualContent))
+		})
 	}
-}
-
-// cdHeader returns Headers with given Content-Disposition values.
-func cdHeader(values []string) *http.Header {
-	return &http.Header{http.CanonicalHeaderKey("content-disposition"): values}
 }

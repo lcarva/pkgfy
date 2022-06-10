@@ -12,13 +12,13 @@ import (
 
 // installCmd represents the install command
 var installCmd = &cobra.Command{
-	Use:   "install [url to fetch]",
+	Use:   "install [url to fetch] [package name]",
 	Short: "Install a file from a URL",
 	Long:  "The file is downloaded into ~/bin, ready to be executed.",
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		url := args[0]
-		fmt.Println("installing ...")
+		name := args[1]
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
 			return
@@ -33,9 +33,11 @@ var installCmd = &cobra.Command{
 		if err != nil {
 			return
 		}
-		opts := &core.InstallOptions{Alias: alias}
+		pkg := core.Package{Alias: alias, Name: name, URL: url}
 		p := core.Pkgfy{Config: config, Client: &client}
-		err = p.Install(url, opts)
+
+		fmt.Printf("Installing %s from %s...\n", name, url)
+		err = p.Install(pkg)
 		return
 	},
 }
