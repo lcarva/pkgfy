@@ -22,11 +22,39 @@ func Save(dbFile string, pkg core.Package) (err error) {
 	if err != nil {
 		return
 	}
-	db.AutoMigrate(&PackageORM{})
+	err = db.AutoMigrate(&PackageORM{})
+	if err != nil {
+		return
+	}
 
 	return db.Clauses(clause.OnConflict{UpdateAll: true}).Create(&PackageORM{
 		Name:  pkg.Name,
 		Alias: pkg.Alias,
 		URL:   pkg.URL,
 	}).Error
+}
+
+func List(dbFile string) (pkgs []core.Package, err error) {
+	db, err := gorm.Open(sqlite.Open(dbFile), &gorm.Config{})
+	if err != nil {
+		return
+	}
+	err = db.AutoMigrate(&PackageORM{})
+	if err != nil {
+		return
+	}
+
+	pkgsORM := []PackageORM{}
+	err = db.Order("name asc").Find(&pkgsORM).Error
+	if err != nil {
+		return
+	}
+	for _, pkgORM := range pkgsORM {
+		pkgs = append(pkgs, core.Package{
+			Name:  pkgORM.Name,
+			Alias: pkgORM.Alias,
+			URL:   pkgORM.URL,
+		})
+	}
+	return
 }

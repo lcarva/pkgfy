@@ -5,6 +5,8 @@ go 1.18
 require (
 	github.com/spf13/cobra v1.4.0
 	github.com/stretchr/testify v1.7.2
+	gorm.io/driver/sqlite v1.3.4
+	gorm.io/gorm v1.23.6
 )
 
 require (
@@ -16,6 +18,4 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	gorm.io/driver/sqlite v1.3.4 // indirect
-	gorm.io/gorm v1.23.6 // indirect
 )
